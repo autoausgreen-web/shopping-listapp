@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>쇼핑 리스트</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 40px 16px;
+    }
+
+    .container {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+      width: 100%;
+      max-width: 480px;
+      padding: 32px 28px;
+      height: fit-content;
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      color: #1a202c;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+
+    .input-row input {
+      flex: 1;
+      padding: 12px 14px;
+      border: 2px solid #e2e8f0;
+      border-radius: 10px;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+      color: #1a202c;
+    }
+
+    .input-row input:focus {
+      border-color: #4f8ef7;
+    }
+
+    .input-row button {
+      padding: 12px 18px;
+      background: #4f8ef7;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 1.4rem;
+      cursor: pointer;
+      transition: background 0.2s;
+      line-height: 1;
+    }
+
+    .input-row button:hover {
+      background: #2d6fe0;
+    }
+
+    .stats {
+      font-size: 0.85rem;
+      color: #718096;
+      margin-bottom: 12px;
+    }
+
+    ul {
+      list-style: none;
+    }
+
+    li {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 10px;
+      border-radius: 10px;
+      transition: background 0.15s;
+      animation: fadeIn 0.2s ease;
+    }
+
+    li:hover {
+      background: #f7fafc;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    li input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      accent-color: #4f8ef7;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .item-text {
+      flex: 1;
+      font-size: 1rem;
+      color: #2d3748;
+      word-break: break-word;
+      transition: color 0.2s, text-decoration 0.2s;
+    }
+
+    .item-text.done {
+      color: #a0aec0;
+      text-decoration: line-through;
+    }
+
+    .delete-btn {
+      background: none;
+      border: none;
+      color: #cbd5e0;
+      font-size: 1.1rem;
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: 6px;
+      transition: color 0.2s, background 0.2s;
+      flex-shrink: 0;
+    }
+
+    .delete-btn:hover {
+      color: #e53e3e;
+      background: #fff5f5;
+    }
+
+    .empty {
+      text-align: center;
+      color: #a0aec0;
+      padding: 32px 0;
+      font-size: 0.95rem;
+    }
+
+    .clear-btn {
+      margin-top: 20px;
+      width: 100%;
+      padding: 10px;
+      background: none;
+      border: 2px solid #e2e8f0;
+      border-radius: 10px;
+      color: #718096;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .clear-btn:hover {
+      border-color: #e53e3e;
+      color: #e53e3e;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🛒 쇼핑 리스트</h1>
+
+    <div class="input-row">
+      <label for="itemInput" class="sr-only">아이템 이름</label>
+      <input type="text" id="itemInput" placeholder="아이템을 입력하세요..." maxlength="80" />
+      <button id="addBtn" title="추가">+</button>
+    </div>
+
+    <div class="stats" id="stats"></div>
+
+    <ul id="list"></ul>
+
+    <div class="empty" id="empty">아직 아이템이 없어요. 위에서 추가해 보세요!</div>
+
+    <button class="clear-btn" id="clearDoneBtn" style="display:none">완료된 항목 모두 삭제</button>
+  </div>
+
+  <script>
+    const input = document.getElementById('itemInput');
+    const addBtn = document.getElementById('addBtn');
+    const list = document.getElementById('list');
+    const empty = document.getElementById('empty');
+    const stats = document.getElementById('stats');
+    const clearDoneBtn = document.getElementById('clearDoneBtn');
+
+    let items = [];
+    try {
+      items = JSON.parse(localStorage.getItem('shopping-list') || '[]');
+    } catch (e) {
+      items = [];
+    }
+
+    function save() {
+      try {
+        localStorage.setItem('shopping-list', JSON.stringify(items));
+      } catch (e) {
+        console.warn('저장 실패 (스토리지 용량 초과 또는 시크릿 모드):', e);
+      }
+    }
+
+    function render() {
+      list.innerHTML = '';
+
+      if (items.length === 0) {
+        empty.style.display = 'block';
+        stats.textContent = '';
+        clearDoneBtn.style.display = 'none';
+        return;
+      }
+
+      empty.style.display = 'none';
+
+      const done = items.filter(i => i.checked).length;
+      stats.textContent = `총 ${items.length}개 · 완료 ${done}개`;
+      clearDoneBtn.style.display = done > 0 ? 'block' : 'none';
+
+      items.forEach((item, idx) => {
+        const li = document.createElement('li');
+
+        const checkboxId = `item-${idx}`;
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.id = checkboxId;
+        checkbox.checked = item.checked;
+        checkbox.addEventListener('change', () => {
+          items[idx].checked = checkbox.checked;
+          save();
+          render();
+        });
+
+        const label = document.createElement('label');
+        label.htmlFor = checkboxId;
+        label.className = 'item-text' + (item.checked ? ' done' : '');
+        label.textContent = item.text;
+
+        const del = document.createElement('button');
+        del.className = 'delete-btn';
+        del.textContent = '✕';
+        del.title = '삭제';
+        del.addEventListener('click', () => {
+          items.splice(idx, 1);
+          save();
+          render();
+        });
+
+        li.appendChild(checkbox);
+        li.appendChild(label);
+        li.appendChild(del);
+        list.appendChild(li);
+      });
+    }
+
+    function addItem() {
+      const text = input.value.trim();
+      if (!text) return;
+      items.push({ text, checked: false });
+      save();
+      render();
+      input.value = '';
+      input.focus();
+    }
+
+    addBtn.addEventListener('click', addItem);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') addItem(); });
+
+    clearDoneBtn.addEventListener('click', () => {
+      items = items.filter(i => !i.checked);
+      save();
+      render();
+    });
+
+    render();
+  </script>
+</body>
+</html>
